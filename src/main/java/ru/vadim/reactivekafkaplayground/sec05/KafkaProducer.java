@@ -26,7 +26,7 @@ public class KafkaProducer {
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class
         );
         var options = SenderOptions.<String, String>create(producerConfig);
-       var flux = Flux.interval(Duration.ofMillis(50))
+       var flux = Flux.interval(Duration.ofMillis(150))
                 .take(10_000)
                 .map(i -> new ProducerRecord<>("order-events", i.toString(), "order-" + i))
                 .map(producerRecord -> SenderRecord.create(producerRecord, producerRecord.key()));
