@@ -24,10 +24,10 @@ public class KafkaProducer {
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class
         );
         var options = SenderOptions.<String, String>create(producerConfig);
-       var flux = Flux.interval(Duration.ofMillis(150))
-                .take(10_000)
+       var flux = Flux.range(1, 100)
                 .map(i -> new ProducerRecord<>("order-events", i.toString(), "order-" + i))
                 .map(producerRecord -> SenderRecord.create(producerRecord, producerRecord.key()));
+
         var sender = KafkaSender.create(options);
         sender.send(flux)
                 .doOnNext(result -> log.info("correlation id: {}", result.correlationMetadata())) //Этот корреляционный ID — это метаданные, связанные с отправленным сообщением (в данном случае это ключ сообщения, переданный в `SenderRecord.create`).
