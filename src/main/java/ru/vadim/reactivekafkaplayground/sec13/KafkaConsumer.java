@@ -1,13 +1,17 @@
 package ru.vadim.reactivekafkaplayground.sec13;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.kafka.receiver.KafkaReceiver;
 import reactor.kafka.receiver.ReceiverOptions;
 import reactor.kafka.receiver.ReceiverRecord;
+import reactor.kafka.sender.KafkaSender;
+import reactor.kafka.sender.SenderOptions;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -23,6 +27,31 @@ public class KafkaConsumer {
     public static final Logger log = LoggerFactory.getLogger(KafkaConsumer.class);
 
     public static void main(String[] args) {
+        var dltProducer = deadLetterTopicProducer();
+        var processor = new OrderEventProcessor(dltProducer);
+        var reciever = kafkaReceiver();
+
+        reciever.receive()
+                .concatMap(processor::process)
+                .subscribe();
+
+    }
+    // делаем отдельный пайплайн
+    private static ReactiveDeadLetterTopicProducer<String, String> deadLetterTopicProducer() {
+        var producerConfig = Map.<String, Object>of(
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092",
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class
+        );
+        var options = SenderOptions.<String, String>create(producerConfig);
+        var  sender = KafkaSender.create(options);
+        return new ReactiveDeadLetterTopicProducer<>(
+                sender,
+                Retry.fixedDelay(2, Duration.ofSeconds(1))
+        );
+    }
+
+    private static KafkaReceiver<String, String> kafkaReceiver() {
         Map<String, Object> consumerConfig = Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092",
                 ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
@@ -31,25 +60,9 @@ public class KafkaConsumer {
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
                 ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, "1"
         );
-        ReceiverOptions<Object, Object> options = ReceiverOptions.create(consumerConfig)
-                .subscription(List.of("order-events"));
+        var options = ReceiverOptions.<String, String>create(consumerConfig)
+                .subscription(List.of("order-events", "order-events-dlt"));
 
-        KafkaReceiver.create(options)
-                .receive()
-                .concatMap(KafkaConsumer::process)
-                .subscribe();
-    }
-    // делаем отдельный пайплайн
-    private static Mono<Void> process(ReceiverRecord<Object, Object> receiverRecord) {
-        // распростроняется сигнал ретрая и ошибки тьолько для этого паблишера  Mono.just(receiverRecord)
-        return Mono.just(receiverRecord)
-                .doOnNext(r -> {
-                    var index = ThreadLocalRandom.current().nextInt(1, 100);
-                    log.info("key: {}, index: {},  value: {}", r.key(), index, r.value().toString().toCharArray()[index]);
-                })
-                .retryWhen(Retry.fixedDelay(3, Duration.ofMillis(100)).onRetryExhaustedThrow((spec, signal) -> signal.failure()))
-                .doFinally(s -> receiverRecord.receiverOffset().acknowledge())
-                .onErrorComplete()
-                .then();
+        return KafkaReceiver.create(options);
     }
 }

@@ -6,7 +6,7 @@ public class RecordProcessingException extends RuntimeException{
 
     private final ReceiverRecord<?, ?> record;
 
-    public RecordProcessingException(ReceiverRecord<?, ?> record, Exception e) {
+    public RecordProcessingException(ReceiverRecord<?, ?> record, Throwable e) {
         super(e);
         this.record = record;
     }
