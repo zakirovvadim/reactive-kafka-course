@@ -1,14 +1,14 @@
 package ru.vadim.reactivekafkaplayground.sec16;
 
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate;
 import reactor.kafka.receiver.ReceiverOptions;
 
 import java.util.List;
 
-@Configurable
+@Configuration
 public class KafkaConsumerConfig {
 
     @Bean
