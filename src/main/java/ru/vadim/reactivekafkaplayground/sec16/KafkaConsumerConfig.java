@@ -12,13 +12,13 @@ import java.util.List;
 public class KafkaConsumerConfig {
 
     @Bean
-    public ReceiverOptions<String, String> receiverOptions(KafkaProperties kafkaProperties) {
-        return ReceiverOptions.<String, String>create(kafkaProperties.buildConsumerProperties())
+    public ReceiverOptions<String, OrderEvent> receiverOptions(KafkaProperties kafkaProperties) {
+        return ReceiverOptions.<String, OrderEvent>create(kafkaProperties.buildConsumerProperties())
                 .subscription(List.of("order-events"));
     }
 
     @Bean
-    public ReactiveKafkaConsumerTemplate<String, String> consumerTemplate(ReceiverOptions<String, String> receiverOptions) {
+    public ReactiveKafkaConsumerTemplate<String, OrderEvent> consumerTemplate(ReceiverOptions<String, OrderEvent> receiverOptions) {
         return new ReactiveKafkaConsumerTemplate<>(receiverOptions);
     }
 }
