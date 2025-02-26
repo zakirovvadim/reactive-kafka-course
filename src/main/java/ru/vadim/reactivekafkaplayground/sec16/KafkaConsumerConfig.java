@@ -27,14 +27,16 @@ Caused by: java.lang.IllegalArgumentException: The class 'ru.vadim.reactivekafka
 public class KafkaConsumerConfig {
 
     @Bean
-    public ReceiverOptions<String, OrderEvent> receiverOptions(KafkaProperties kafkaProperties) {
-        return ReceiverOptions.<String, OrderEvent>create(kafkaProperties.buildConsumerProperties())
+    public ReceiverOptions<String, DummyOrder> receiverOptions(KafkaProperties kafkaProperties) {
+        return ReceiverOptions.<String, DummyOrder>create(kafkaProperties.buildConsumerProperties())
                 .consumerProperty(JsonDeserializer.REMOVE_TYPE_INFO_HEADERS, false) // нужно чтобы посмотреть какой тип приходит с сообщением, так как по умолчанию консьюмер считывает тип и потом его удаляет
+                .consumerProperty(JsonDeserializer.USE_TYPE_INFO_HEADERS, false) // 1 если используем кастомный объект DummyOrder нужно указать, что  консьюмер не использовал информацию о заголовке для сериализации, так как там хранится информация о сущности ОрдерТайп
+                .consumerProperty(JsonDeserializer.VALUE_DEFAULT_TYPE, DummyOrder.class) // 2 параметр также нужен если мы хотим сериализовать в свой объект, иначе кафка выдаст ошибку No type information in headers and no default type provided, так как мы сказали не десериализуй по хидеру.
                 .subscription(List.of("order-events"));
     }
 
     @Bean
-    public ReactiveKafkaConsumerTemplate<String, OrderEvent> consumerTemplate(ReceiverOptions<String, OrderEvent> receiverOptions) {
+    public ReactiveKafkaConsumerTemplate<String, DummyOrder> consumerTemplate(ReceiverOptions<String, DummyOrder> receiverOptions) {
         return new ReactiveKafkaConsumerTemplate<>(receiverOptions);
     }
 }
