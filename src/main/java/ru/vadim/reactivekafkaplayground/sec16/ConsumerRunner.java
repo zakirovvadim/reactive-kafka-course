@@ -17,7 +17,8 @@ public class ConsumerRunner implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         this.template.receive()
-                .doOnNext(r -> log.info("key: {}, value: {}", r.key(), r.value()))
+                .doOnNext(r -> r.headers().forEach(h -> log.info("header key: {} = {}", h.key(), new String(h.value()))))
+//                .doOnNext(r -> log.info("key: {}, value: {}", r.key(), r.value()))
                 .subscribe();
     }
 }
